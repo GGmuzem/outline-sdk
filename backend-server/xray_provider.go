@@ -58,7 +58,9 @@ func (p *XrayProvider) CreateKey(userID string) (string, string, error) {
 	// Check if user already exists to prevent duplicates
 	clients, err := p.client.GetClients(p.inboundID)
 	if err == nil {
+		log.Printf("DEBUG: Found %d clients in inbound %d", len(clients), p.inboundID)
 		for _, c := range clients {
+			log.Printf("DEBUG: Client in Xray: ID=%s, Email=%s", c.ID, c.Email)
 			if c.Email == email {
 				log.Printf("User %s already exists in Xray, reusing key", userID)
 				return c.ID, p.buildVLESSURI(c.ID), nil
