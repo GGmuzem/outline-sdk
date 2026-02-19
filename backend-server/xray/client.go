@@ -2,6 +2,7 @@ package xray
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,30 +21,36 @@ type Client struct {
 	loggedIn   bool
 }
 
-// InboundClient represents a VLESS client inside an inbound.
 type InboundClient struct {
-	ID    string `json:"id"` // UUID
+	ID    string `json:"id"`
 	Email string `json:"email"`
-	Flow  string `json:"flow,omitempty"`
+	Flow  string `json:"flow"`
 }
 
-// InboundInfo contains parsed inbound configuration.
 type InboundInfo struct {
-	ID             int             `json:"id"`
-	Protocol       string          `json:"protocol"`
+	Id             int             `json:"id"`
+	Up             int64           `json:"up"`
+	Down           int64           `json:"down"`
+	Total          int64           `json:"total"`
+	Remark         string          `json:"remark"`
+	Enable         bool            `json:"enable"`
+	ExpiryTime     int64           `json:"expiryTime"`
+	ClientStats    []interface{}   `json:"clientStats"`
+	Listen         string          `json:"listen"`
 	Port           int             `json:"port"`
-	StreamSettings json.RawMessage `json:"streamSettings"`
+	Protocol       string          `json:"protocol"`
 	Settings       json.RawMessage `json:"settings"`
-	Clients        []InboundClient `json:"-"` // parsed separately
+	StreamSettings json.RawMessage `json:"streamSettings"`
+	Tag            string          `json:"tag"`
+	Sniffing       json.RawMessage `json:"sniffing"`
 }
 
-// VLESSConfig holds all the parameters needed to build a vless:// URI.
 type VLESSConfig struct {
 	UUID        string
 	Host        string
 	Port        int
+	Security    string
 	Flow        string
-	Security    string // "reality" or "tls"
 	SNI         string
 	Fingerprint string
 	PublicKey   string
@@ -54,12 +61,16 @@ type VLESSConfig struct {
 // NewClient creates a 3X-UI API client.
 func NewClient(baseURL, username, password string) *Client {
 	jar, _ := cookiejar.New(nil)
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 	return &Client{
 		BaseURL:  strings.TrimRight(baseURL, "/"),
 		Username: username,
 		Password: password,
 		httpClient: &http.Client{
-			Jar: jar,
+			Jar:       jar,
+			Transport: tr,
 		},
 	}
 }

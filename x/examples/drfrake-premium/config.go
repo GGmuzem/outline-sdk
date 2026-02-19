@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 )
@@ -37,51 +36,25 @@ func GetConfigDir() string {
 }
 
 func LoadConfig() (*Config, error) {
-	path := filepath.Join(GetConfigDir(), "config.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		// Create default config if missing
-		cfg := &Config{
-			BackendURL: "http://localhost:8080",
-		}
-		SaveConfig(cfg)
-		return cfg, nil
-	}
-
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-	return &cfg, nil
+	// Hardcoded config, no file I/O
+	return &Config{
+		BackendURL: "http://31.135.65.188:8080",
+	}, nil
 }
 
 func SaveConfig(cfg *Config) error {
-	path := filepath.Join(GetConfigDir(), "config.json")
-	data, _ := json.MarshalIndent(cfg, "", "  ")
-	return os.WriteFile(path, data, 0644)
+	// No-op
+	return nil
 }
 
 func LoadServers() ([]ServerConfig, error) {
-	path := filepath.Join(GetConfigDir(), "servers.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		// Return default fallback servers + write them to file
-		defaults := GetDefaultServers()
-		SaveServers(defaults)
-		return defaults, nil
-	}
-
-	var servers []ServerConfig
-	if err := json.Unmarshal(data, &servers); err != nil {
-		return GetDefaultServers(), nil
-	}
-	return servers, nil
+	// No file I/O, return defaults
+	return GetDefaultServers(), nil
 }
 
 func SaveServers(servers []ServerConfig) error {
-	path := filepath.Join(GetConfigDir(), "servers.json")
-	data, _ := json.MarshalIndent(servers, "", "  ")
-	return os.WriteFile(path, data, 0644)
+	// No-op
+	return nil
 }
 
 func GetDefaultServers() []ServerConfig {

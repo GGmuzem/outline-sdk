@@ -53,10 +53,11 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	// Initialize API Client for backend communication
-	backendURL := a.config.BackendURL
-	if backendURL == "" {
-		backendURL = "http://localhost:8080"
+	backendURL := "http://31.135.65.188:8080"
+	if a.config.BackendURL != "" && !strings.Contains(a.config.BackendURL, "localhost") {
+		backendURL = a.config.BackendURL
 	}
+	log.Printf("Using Backend URL: %s", backendURL)
 	a.apiClient = NewAPIClient(backendURL)
 	log.Printf("API Client initialized: %s", backendURL)
 
@@ -132,6 +133,7 @@ func (a *App) shutdown(ctx context.Context) {
 // --- Auth Methods ---
 
 func (a *App) Register(email string, password string) (*User, error) {
+	log.Printf("[App] Registering user %s using Backend URL: %s", email, a.apiClient.BaseURL)
 	authResp, err := a.apiClient.Register(email, password)
 	if err != nil {
 		return nil, err
@@ -149,6 +151,7 @@ func (a *App) Register(email string, password string) (*User, error) {
 }
 
 func (a *App) Login(email string, password string) (*User, error) {
+	log.Printf("[App] Logging in user %s using Backend URL: %s", email, a.apiClient.BaseURL)
 	authResp, err := a.apiClient.Login(email, password)
 	if err != nil {
 		return nil, err
