@@ -53,28 +53,27 @@ func NewXrayProvider(panelURL, username, password string, inboundID int, serverH
 }
 
 func (p *XrayProvider) CreateKey(userID string) (string, string, error) {
-	clientUUID := uuid.New().String()
 	email := fmt.Sprintf("user-%s", userID)
 
+	// Check if user already exists to prevent duplicates
+	clients, err := p.client.GetClients(p.inboundID)
+	if err == nil {
+		for _, c := range clients {
+			if c.Email == email {
+				log.Printf("User %s already exists in Xray, reusing key", userID)
+				return c.ID, p.buildVLESSURI(c.ID), nil
+			}
+		}
+	} else {
+		log.Printf("Warning: failed to list clients: %v", err)
+	}
+
+	clientUUID := uuid.New().String()
 	if err := p.client.AddClient(p.inboundID, clientUUID, email); err != nil {
 		return "", "", fmt.Errorf("failed to create xray client: %w", err)
 	}
 
-	// Build VLESS URI
-	vlessURI := xray.BuildVLESSURI(xray.VLESSConfig{
-		UUID:        clientUUID,
-		Host:        p.serverHost,
-		Port:        p.settings.Port,
-		Flow:        p.settings.Flow,
-		Security:    p.settings.Security,
-		SNI:         p.settings.SNI,
-		Fingerprint: p.settings.Fingerprint,
-		PublicKey:   p.settings.PublicKey,
-		ShortID:     p.settings.ShortID,
-		SpiderX:     p.settings.SpiderX,
-	})
-
-	return clientUUID, vlessURI, nil
+	return clientUUID, p.buildVLESSURI(clientUUID), nil
 }
 
 func (p *XrayProvider) DeleteKey(keyID string) error {
@@ -89,23 +88,10 @@ func (p *XrayProvider) GetKeys() ([]VPNKey, error) {
 
 	var keys []VPNKey
 	for _, c := range clients {
-		vlessURI := xray.BuildVLESSURI(xray.VLESSConfig{
-			UUID:        c.ID,
-			Host:        p.serverHost,
-			Port:        p.settings.Port,
-			Flow:        p.settings.Flow,
-			Security:    p.settings.Security,
-			SNI:         p.settings.SNI,
-			Fingerprint: p.settings.Fingerprint,
-			PublicKey:   p.settings.PublicKey,
-			ShortID:     p.settings.ShortID,
-			SpiderX:     p.settings.SpiderX,
-		})
-
 		keys = append(keys, VPNKey{
 			ID:        c.ID,
 			Name:      c.Email,
-			AccessURL: vlessURI,
+			AccessURL: p.buildVLESSURI(c.ID),
 		})
 	}
 	return keys, nil
@@ -115,4 +101,19 @@ func (p *XrayProvider) SetName(keyID string, name string) error {
 	// 3X-UI uses email as identifier; name change not easily supported via API
 	// This is a no-op for now
 	return nil
+}
+
+func (p *XrayProvider) buildVLESSURI(uuid string) string {
+	return xray.BuildVLESSURI(xray.VLESSConfig{
+		UUID:        uuid,
+		Host:        p.serverHost,
+		Port:        p.settings.Port,
+		Flow:        p.settings.Flow,
+		Security:    p.settings.Security,
+		SNI:         p.settings.SNI,
+		Fingerprint: p.settings.Fingerprint,
+		PublicKey:   p.settings.PublicKey,
+		ShortID:     p.settings.ShortID,
+		SpiderX:     p.settings.SpiderX,
+	})
 }
